@@ -40,6 +40,7 @@ it('Should navigate find product, check responses, add to wishlist', () => {
 
     cy.get('.product-grid-item__name').contains('Náhrdelník Mon Petit').click();
     
+    cy.url().should('include', '/product');
     cy.wait('@apiProductCheck', { timeout: 10000 }).then((interception) => {
       cy.log('Product API check response:', interception.response);
       expect(interception.response.statusCode).to.eq(200);

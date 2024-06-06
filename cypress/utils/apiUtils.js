@@ -16,7 +16,7 @@ export const checkFilters = (filters) => {
       if (!filter.noMoreButton) {
         cy.contains('button', 'Zobraziť viac').then(button => {
           if (button.is(':visible')) {
-            cy.wrap(button).click({ force: true });
+            cy.wrap(button).scrollIntoView().should('be.visible').click({ force: true });
           }
         });
       }
