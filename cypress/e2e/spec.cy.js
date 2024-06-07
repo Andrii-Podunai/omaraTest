@@ -1,18 +1,22 @@
-import { interceptApi,  navigateTo, checkFilters } from '../utils/apiUtils';
+import HomePage from '../pageObjects/HomePage';
+import ProductPage from '../pageObjects/ProductPage';
+import BasePage from '../pageObjects/BasePage';
 
 describe('Testing omara.sk website', () => {
+  const basePage = new BasePage();
+  const homePage = new HomePage();
+  const productPage = new ProductPage();
 
   beforeEach(() => {
-    cy.visit('https://omara.sk/');
+    homePage.visit();
   });
 
-it('Should navigate to "Zásnuby", check responses and filters', () => {
+  it('Should navigate to "Zásnuby", check responses and filters', () => {
+    homePage.interceptApi('GET', 'apiCheck', '**/engagement**');
 
-    interceptApi('apiCheck', '**/engagement**');
+    basePage.navigateTo('a[href="../engagement"]');
 
-    navigateTo('a[href="../engagement"]');
-
-    cy.wait('@apiCheck', { timeout: 10000 }).then(({response}) => {
+    cy.wait('@apiCheck', { timeout: 10000 }).then(({ response }) => {
       expect(response.statusCode).to.eq(200);
       expect(response.body).to.not.be.null;
     });
@@ -28,18 +32,22 @@ it('Should navigate to "Zásnuby", check responses and filters', () => {
       { title: 'Štýl Osadenia Kameňa', options: ['Žiadny Kameň', 'U-Páve'], noMoreButton: true }
     ];
 
-    checkFilters(expectedFilters);
-    
+    homePage.checkFilters(expectedFilters);
   });
 
-it('Should navigate find product, check responses, add to wishlist', () => {
+  it('Should navigate find product, check responses, add to wishlist', () => {
+    cy.intercept('GET', '**/collection/initials').as('allRequests');
 
-    navigateTo('.header__nav a[href="/collection/initials"]')
+    basePage.navigateTo('.header__nav a[href="/collection/initials"]');
 
-    interceptApi('apiProductCheck', '**/product**');
+    productPage.interceptApi('GET', 'apiProductCheck', '**/product**');
 
-    cy.get('.product-grid-item__name').contains('Náhrdelník Mon Petit').click();
-    
+    productPage.selectProduct('Náhrdelník Mon Petit');
+
+    cy.wait('@allRequests', { timeout: 10000 }).then((interception) => {
+      cy.log('All Requests:', interception);
+    });
+
     cy.url().should('include', '/product');
     cy.wait('@apiProductCheck', { timeout: 10000 }).then((interception) => {
       cy.log('Product API check response:', interception.response);
@@ -47,18 +55,14 @@ it('Should navigate find product, check responses, add to wishlist', () => {
       expect(interception.response.body).to.not.be.null;
     });
 
-    cy.intercept('POST', 'https://api.omara.sk/api/v1/wishlists').as('wishlistCheck');
+    productPage.interceptApi('POST', 'wishlistCheck', '**/wishlist**'); // Assuming wishlist is a POST request
 
-    cy.url().should('include', '/product');
-    cy.contains('Pridať do zoznamu želaní').click();
-    
+    productPage.addToWishlist();
+
     cy.wait('@wishlistCheck', { timeout: 10000 }).then((interception) => {
       cy.log('Wishlist API check response:', interception.response);
       expect(interception.response.statusCode).to.eq(200);
       expect(interception.response.body).to.not.be.null;
     });
-
   });
-
 });
-
